@@ -7,7 +7,7 @@ import {promptChoice} from '@perkycrow/cli_tools/prompt'
 import {createCleanerRegistry, loadConfig, runAudit, runFix, report, reportFix} from '../src/index.js'
 import {findFiles, isInScope} from '../src/core/scanner.js'
 import {reportDuplicates, reportUnused} from '../src/reports/index.js'
-import {runInteractiveComments} from '../src/interactive/comments.js'
+import {runInteractive} from '../src/interactive/comments.js'
 
 
 const cli = parseArgs(process.argv.slice(2), {
@@ -63,7 +63,7 @@ if (cli.interactive) {
     const files = findFiles(rootDir, {ignore: config.ignore, targetPath})
         .filter(file => isInScope(file, commentsConfig))
 
-    const stats = await runInteractiveComments(files, {
+    const stats = await runInteractive(files, {
         readFile: relativePath => fs.readFileSync(path.join(rootDir, relativePath), 'utf-8'),
         writeFile: (relativePath, content) => fs.writeFileSync(path.join(rootDir, relativePath), content, 'utf-8'),
         prompt: promptChoice,

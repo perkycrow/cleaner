@@ -31,6 +31,36 @@ function isInComment (line, matchIndex) {
 }
 
 
+const DIRECTIVE_DETECT = [
+    /eslint-disable-next-line\b/,
+    /eslint-disable-line\b/,
+    /eslint-disable\b/
+]
+
+
+export function findUncleanDirectiveLines (content) {
+    const lines = content.split('\n')
+    const items = []
+
+    lines.forEach((line, index) => {
+        for (const pattern of DIRECTIVE_DETECT) {
+            const match = line.match(pattern)
+            if (match && isInComment(line, match.index) && !isCleanDirective(line)) {
+                const slash = line.indexOf('//')
+                const block = line.indexOf('/*')
+                const useSlash = slash !== -1 && (block === -1 || slash < block)
+                const opener = useSlash ? slash : block
+
+                items.push({index, before: line.slice(0, opener), style: useSlash ? '//' : 'block', line})
+                break
+            }
+        }
+    })
+
+    return items
+}
+
+
 export function findUncleanDisables (content) {
     const lines = content.split('\n')
     const unclean = []

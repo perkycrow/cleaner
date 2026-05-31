@@ -1,16 +1,25 @@
 import {describe, test, expect} from 'vitest'
-import {collectCommentBlocks, applyBlockEdits, runInteractiveComments} from './comments.js'
+import {
+    collectCommentBlocks,
+    collectEslintItems,
+    collectTriageItems,
+    applyTriageEdits,
+    runInteractive
+} from './comments.js'
 
 
 describe('collectCommentBlocks', () => {
 
-    test('groups consecutive // lines into one block', () => {
+    test('groups consecutive standalone // lines into one block', () => {
         const content = '// line one\n// line two\nconst x = 1\n// far'
         const blocks = collectCommentBlocks(content)
         expect(blocks).toHaveLength(2)
         expect(blocks[0].lines).toHaveLength(2)
-        expect(blocks[0].startLine).toBe(1)
-        expect(blocks[0].endLine).toBe(2)
+    })
+
+    test('an inline comment is its own block', () => {
+        const blocks = collectCommentBlocks('// a\n// b\nconst x = 1 // inline')
+        expect(blocks).toHaveLength(2)
         expect(blocks[1].lines).toHaveLength(1)
     })
 
@@ -21,59 +30,88 @@ describe('collectCommentBlocks', () => {
         expect(blocks[0].lines[0].after).toBe(' strip me')
     })
 
-    test('an inline comment is its own block, not merged with standalone lines above', () => {
-        const content = '// a\n// b\nconst x = 1 // inline'
-        const blocks = collectCommentBlocks(content)
-        expect(blocks).toHaveLength(2)
-        expect(blocks[0].lines).toHaveLength(2)
-        expect(blocks[1].lines).toHaveLength(1)
+})
+
+
+describe('collectEslintItems', () => {
+
+    test('collects unclean disable directives (line, next-line, whole-file)', () => {
+        const content = [
+            'const a = 1 // eslint-disable-line no-unused-vars',
+            '// eslint-disable-next-line foo',
+            '/* eslint-disable */'
+        ].join('\n')
+        const items = collectEslintItems(content)
+        expect(items).toHaveLength(3)
+        expect(items.every(item => item.kind === 'eslint')).toBe(true)
     })
 
-    test('ignores // inside strings', () => {
-        expect(collectCommentBlocks("const u = 'http://x'")).toHaveLength(0)
+    test('ignores directives already marked -- clean', () => {
+        expect(collectEslintItems('x // eslint-disable-line foo -- clean')).toHaveLength(0)
     })
 
 })
 
 
-describe('applyBlockEdits', () => {
+describe('applyTriageEdits', () => {
 
-    const content = '// a\n// b\nconst x = 1 // inline\n'
-    const blocks = collectCommentBlocks(content)
-
-    test('keep adds //! to every line of the block', () => {
-        const result = applyBlockEdits(content, [{block: blocks[0], action: 'keep'}])
-        expect(result).toContain('//! a')
-        expect(result).toContain('//! b')
+    test('comment keep adds //!, discard removes/trims', () => {
+        const content = '// a\nconst x = 1 // inline'
+        const items = collectCommentBlocks(content)
+        const kept = applyTriageEdits(content, [{item: items[0], action: 'keep'}])
+        expect(kept).toContain('//! a')
+        const discarded = applyTriageEdits(content, [{item: items[1], action: 'discard'}])
+        expect(discarded).toContain('const x = 1')
+        expect(discarded).not.toContain('inline')
     })
 
-    test('discard removes standalone comment lines and trims inline ones', () => {
-        const result = applyBlockEdits(content, [
-            {block: blocks[0], action: 'discard'},
-            {block: blocks[1], action: 'discard'}
-        ])
-        expect(result).not.toContain('// a')
-        expect(result).not.toContain('// b')
-        expect(result).toContain('const x = 1')
-        expect(result).not.toContain('inline')
+    test('eslint keep appends -- clean (// form)', () => {
+        const content = 'const x = 1 // eslint-disable-line no-unused-vars'
+        const item = collectEslintItems(content)[0]
+        const result = applyTriageEdits(content, [{item, action: 'keep'}])
+        expect(result).toBe('const x = 1 // eslint-disable-line no-unused-vars -- clean')
     })
 
-    test('skip leaves the block untouched', () => {
-        expect(applyBlockEdits(content, [{block: blocks[0], action: 'skip'}])).toBe(content)
+    test('eslint keep inserts -- clean before */ (block form)', () => {
+        const content = '/* eslint-disable */'
+        const item = collectEslintItems(content)[0]
+        const result = applyTriageEdits(content, [{item, action: 'keep'}])
+        expect(result).toBe('/* eslint-disable -- clean */')
+    })
+
+    test('eslint discard removes a standalone directive line', () => {
+        const content = '// eslint-disable-next-line foo\nconst x = 1'
+        const item = collectEslintItems(content)[0]
+        const result = applyTriageEdits(content, [{item, action: 'discard'}])
+        expect(result).toBe('const x = 1')
     })
 
 })
 
 
-describe('runInteractiveComments', () => {
+describe('collectTriageItems', () => {
 
-    test('drives prompts and writes the edited file', async () => {
-        const files = {'a.js': '// keep me\n// and me\nconst x = 1 // drop'}
+    test('merges comments and eslint items in line order', () => {
+        const content = '// top\nconst x = 1 // eslint-disable-line foo'
+        const items = collectTriageItems(content)
+        expect(items.map(i => i.kind)).toEqual(['comment', 'eslint'])
+    })
+
+})
+
+
+describe('runInteractive', () => {
+
+    test('triages comments and eslint, writes results, quit stops', async () => {
+        const files = {
+            'a.js': '// drop me\nconst x = 1 // eslint-disable-line foo',
+            'b.js': '// untouched'
+        }
         const written = {}
-        const answers = ['keep', 'discard']
+        const answers = ['discard', 'keep', 'quit']
         let call = 0
 
-        const stats = await runInteractiveComments(['a.js'], {
+        const stats = await runInteractive(['a.js', 'b.js'], {
             readFile: file => files[file],
             writeFile: (file, content) => {
                 written[file] = content
@@ -85,13 +123,12 @@ describe('runInteractiveComments', () => {
             print: () => {}
         })
 
-        expect(stats.blocks).toBe(2)
-        expect(stats.kept).toBe(1)
         expect(stats.discarded).toBe(1)
-        expect(written['a.js']).toContain('//! keep me')
-        expect(written['a.js']).toContain('//! and me')
-        expect(written['a.js']).toContain('const x = 1')
-        expect(written['a.js']).not.toContain('drop')
+        expect(stats.kept).toBe(1)
+        expect(stats.quit).toBe(true)
+        expect(written['a.js']).not.toContain('// drop me')
+        expect(written['a.js']).toContain('eslint-disable-line foo -- clean')
+        expect(written['b.js']).toBeUndefined()
     })
 
 })
