@@ -38,6 +38,40 @@ export async function runAudit (rootDir, registry, config, options = {}) {
 }
 
 
+async function fixFileWithRule (rule, file, {rootDir, ruleConfig, dryRun}) {
+    const absolutePath = path.join(rootDir, file)
+    const content = fs.readFileSync(absolutePath, 'utf-8')
+    const outcome = await rule.fix(content, {relativePath: file, absolutePath, rootDir, options: ruleConfig.options})
+
+    if (!outcome.fixed) {
+        return 0
+    }
+
+    if (!dryRun) {
+        fs.writeFileSync(absolutePath, outcome.result, 'utf-8')
+    }
+
+    return outcome.fixCount || 1
+}
+
+
+async function fixRule (rule, files, {rootDir, ruleConfig, dryRun}) {
+    const scoped = files.filter(file => isInScope(file, ruleConfig))
+    let filesFixed = 0
+    let issuesFixed = 0
+
+    for (const file of scoped) {
+        const fixCount = await fixFileWithRule(rule, file, {rootDir, ruleConfig, dryRun})
+        if (fixCount > 0) {
+            filesFixed += 1
+            issuesFixed += fixCount
+        }
+    }
+
+    return {name: rule.name, filesFixed, issuesFixed}
+}
+
+
 export async function runFix (rootDir, registry, config, options = {}) {
     const files = findFiles(rootDir, {ignore: config.ignore, targetPath: options.targetPath})
     const dryRun = options.dryRun || false
@@ -49,25 +83,7 @@ export async function runFix (rootDir, registry, config, options = {}) {
             continue
         }
 
-        const scoped = files.filter(file => isInScope(file, ruleConfig))
-        let filesFixed = 0
-        let issuesFixed = 0
-
-        for (const file of scoped) {
-            const absolutePath = path.join(rootDir, file)
-            const content = fs.readFileSync(absolutePath, 'utf-8')
-            const outcome = await rule.fix(content, {relativePath: file, absolutePath, rootDir, options: ruleConfig.options})
-
-            if (outcome.fixed) {
-                filesFixed += 1
-                issuesFixed += outcome.fixCount || 1
-                if (!dryRun) {
-                    fs.writeFileSync(absolutePath, outcome.result, 'utf-8')
-                }
-            }
-        }
-
-        results.push({name: rule.name, filesFixed, issuesFixed})
+        results.push(await fixRule(rule, files, {rootDir, ruleConfig, dryRun}))
     }
 
     return {

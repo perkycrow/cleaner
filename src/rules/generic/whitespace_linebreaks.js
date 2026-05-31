@@ -1,8 +1,21 @@
 import * as acorn from 'acorn'
 
 
-function getLineGap (startLine, endLine) {
-    return startLine - endLine - 1
+function isBlankLine (line) {
+    return line.trim() === ''
+}
+
+
+// Counts the run of consecutive blank lines starting at `startIndex` (a 0-based index into `lines`).
+// `afterLine` values are 1-based line numbers of a node's last line, which double as the 0-based index
+// of the first line BELOW that node — so a comment block attached to the next node stops the run and is
+// never counted as gap. This is what keeps fixLineBreaks from deleting comments between declarations.
+function countBlankRunAt (lines, startIndex) {
+    let count = 0
+    while (startIndex + count < lines.length && isBlankLine(lines[startIndex + count])) {
+        count++
+    }
+    return count
 }
 
 
@@ -104,14 +117,14 @@ function parseContent (content) {
 }
 
 
-function checkImportsGap (positions) {
+function checkImportsGap (positions, lines) {
     if (positions.imports.length === 0 || positions.topLevel.length === 0) {
         return null
     }
 
     const lastImport = positions.imports[positions.imports.length - 1]
     const firstCode = positions.topLevel[0]
-    const gap = getLineGap(firstCode.start, lastImport.end)
+    const gap = countBlankRunAt(lines, lastImport.end)
 
     if (gap === 2) {
         return null
@@ -127,7 +140,7 @@ function checkImportsGap (positions) {
 }
 
 
-function checkTopLevelGaps (positions) {
+function checkTopLevelGaps (positions, lines) {
     const significantTypes = new Set(['function', 'class'])
     const adjustments = []
 
@@ -139,7 +152,7 @@ function checkTopLevelGaps (positions) {
             continue
         }
 
-        const gap = getLineGap(next.start, current.end)
+        const gap = countBlankRunAt(lines, current.end)
 
         if (gap !== 2) {
             adjustments.push({
@@ -171,13 +184,13 @@ function getExpectedMemberGap (current, next) {
 }
 
 
-function checkClassMemberGaps (members) {
+function checkClassMemberGaps (members, lines) {
     const adjustments = []
 
     for (let i = 0; i < members.length - 1; i++) {
         const current = members[i]
         const next = members[i + 1]
-        const gap = getLineGap(next.start, current.end)
+        const gap = countBlankRunAt(lines, current.end)
         const expectedGap = getExpectedMemberGap(current, next)
 
         if (expectedGap !== null && gap !== expectedGap) {
@@ -195,7 +208,7 @@ function checkClassMemberGaps (members) {
 }
 
 
-function checkClassGaps (classInfo) {
+function checkClassGaps (classInfo, lines) {
     if (classInfo.members.length === 0) {
         return []
     }
@@ -204,7 +217,7 @@ function checkClassGaps (classInfo) {
     const firstMember = classInfo.members[0]
     const lastMember = classInfo.members[classInfo.members.length - 1]
 
-    const gapAfterOpen = getLineGap(firstMember.start, classInfo.bodyStart)
+    const gapAfterOpen = countBlankRunAt(lines, classInfo.bodyStart)
     if (gapAfterOpen !== 1) {
         adjustments.push({
             afterLine: classInfo.bodyStart,
@@ -215,7 +228,7 @@ function checkClassGaps (classInfo) {
         })
     }
 
-    const gapBeforeClose = getLineGap(classInfo.bodyEnd, lastMember.end)
+    const gapBeforeClose = countBlankRunAt(lines, lastMember.end)
     if (gapBeforeClose !== 1) {
         adjustments.push({
             afterLine: lastMember.end,
@@ -226,7 +239,7 @@ function checkClassGaps (classInfo) {
         })
     }
 
-    adjustments.push(...checkClassMemberGaps(classInfo.members))
+    adjustments.push(...checkClassMemberGaps(classInfo.members, lines))
 
     return adjustments
 }
@@ -238,18 +251,19 @@ export function analyzeLineBreaks (content) {
         return []
     }
 
+    const lines = content.split('\n')
     const positions = collectAstPositions(ast)
     const adjustments = []
 
-    const importsGap = checkImportsGap(positions)
+    const importsGap = checkImportsGap(positions, lines)
     if (importsGap) {
         adjustments.push(importsGap)
     }
 
-    adjustments.push(...checkTopLevelGaps(positions))
+    adjustments.push(...checkTopLevelGaps(positions, lines))
 
     for (const classInfo of positions.classes) {
-        adjustments.push(...checkClassGaps(classInfo))
+        adjustments.push(...checkClassGaps(classInfo, lines))
     }
 
     return adjustments
@@ -263,16 +277,22 @@ export function fixLineBreaks (content, adjustments) {
 
     const lines = content.split('\n')
     const sortedAdjustments = [...adjustments].sort((a, b) => b.afterLine - a.afterLine)
+    let modified = false
 
     for (const adj of sortedAdjustments) {
-        const emptyLinesStart = adj.afterLine
-        const currentEmptyLines = (adj.beforeLine - 1) - emptyLinesStart
+        const startIndex = adj.afterLine
+        const runLength = countBlankRunAt(lines, startIndex)
 
-        if (currentEmptyLines >= 0) {
-            const newEmptyLines = '\n'.repeat(adj.expectedGap).split('\n').slice(0, -1).map(() => '')
-            lines.splice(emptyLinesStart, currentEmptyLines, ...newEmptyLines)
+        if (runLength === adj.expectedGap) {
+            continue
         }
+
+        // Splice ONLY the leading run of blank lines, so an attached comment block (the first non-blank
+        // line below the node) is left untouched. The normalized gap lands between the node and its comment.
+        const newEmptyLines = Array(adj.expectedGap).fill('')
+        lines.splice(startIndex, runLength, ...newEmptyLines)
+        modified = true
     }
 
-    return {result: lines.join('\n'), modified: true}
+    return {result: modified ? lines.join('\n') : content, modified}
 }

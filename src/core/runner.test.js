@@ -139,11 +139,11 @@ describe('runFix', () => {
     })
 
     test('non-fixable rules are skipped', async () => {
-        const registry = createRegistry([
+        const auditOnlyRegistry = createRegistry([
             defineRule({name: 'audit-only', group: 'generic', check: () => ['x']})
         ])
-        const config = resolveConfig({}, registry)
-        const result = await runFix(root, registry, config, {})
+        const config = resolveConfig({}, auditOnlyRegistry)
+        const result = await runFix(root, auditOnlyRegistry, config, {})
         expect(result.results).toHaveLength(0)
     })
 

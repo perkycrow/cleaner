@@ -73,6 +73,30 @@ function bar () {}
         expect(analyzeLineBreaks('this is not valid javascript {')).toEqual([])
     })
 
+
+    test('counts only the blank run, not a comment block, as the gap', () => {
+        const content = `function foo () {}
+
+
+// doc for bar
+function bar () {}
+`
+
+        expect(analyzeLineBreaks(content)).toHaveLength(0)
+    })
+
+
+    test('flags a too-small blank run even with a comment present', () => {
+        const content = `function foo () {}
+// doc for bar
+function bar () {}
+`
+        const adjustments = analyzeLineBreaks(content)
+        expect(adjustments).toHaveLength(1)
+        expect(adjustments[0].currentGap).toBe(0)
+        expect(adjustments[0].expectedGap).toBe(2)
+    })
+
 })
 
 
@@ -90,6 +114,39 @@ describe('fixLineBreaks', () => {
         const {result, modified} = fixLineBreaks('line1\nline2', [])
         expect(result).toBe('line1\nline2')
         expect(modified).toBe(false)
+    })
+
+
+    test('normalizes the blank run without deleting a comment between declarations', () => {
+        const content = `function foo () {}
+// doc for bar
+function bar () {}
+`
+        const adjustments = analyzeLineBreaks(content)
+        const {result} = fixLineBreaks(content, adjustments)
+
+        expect(result).toContain('// doc for bar')
+        expect(result).toBe(`function foo () {}
+
+
+// doc for bar
+function bar () {}
+`)
+    })
+
+
+    test('preserves a multi-line doc block sitting between functions (the v0.1.0 regression)', () => {
+        const content = `function foo () {}
+
+// line one of the doc
+// line two of the doc
+function bar () {}
+`
+        const adjustments = analyzeLineBreaks(content)
+        const {result} = fixLineBreaks(content, adjustments)
+
+        expect(result).toContain('// line one of the doc')
+        expect(result).toContain('// line two of the doc')
     })
 
 })
