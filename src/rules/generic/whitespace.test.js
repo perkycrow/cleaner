@@ -2,10 +2,9 @@ import {describe, expect, test} from 'vitest'
 import whitespaceRule, {
     fixTrailingWhitespace,
     fixEofNewline,
-    analyzeLineBreaks,
-    fixLineBreaks,
     processContent
 } from './whitespace.js'
+import {analyzeLineBreaks, fixLineBreaks} from './whitespace_linebreaks.js'
 
 
 describe('fixTrailingWhitespace', () => {
