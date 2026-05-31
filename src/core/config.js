@@ -51,7 +51,7 @@ function resolveRule (rule, setting) {
         name: rule.name,
         enabled: true,
         include: config.include || rule.defaultInclude || [],
-        exclude: config.exclude || rule.defaultExclude || [],
+        exclude: [...(rule.defaultExclude || []), ...(config.exclude || [])],
         options: extractOptions(config)
     }
 }

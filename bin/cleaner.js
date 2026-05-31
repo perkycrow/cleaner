@@ -11,6 +11,7 @@ const cli = parseArgs(process.argv.slice(2), {
     positionals: ['target'],
     flags: {
         audit: {type: 'bool', help: 'Audit only (default)'},
+        config: {type: 'string', alias: '-c', help: 'Path to a cleaner config file'},
         json: {type: 'bool', help: 'Output results as JSON'}
     }
 })
@@ -18,7 +19,8 @@ const cli = parseArgs(process.argv.slice(2), {
 
 const rootDir = process.cwd()
 const registry = createCleanerRegistry()
-const config = await loadConfig(rootDir, registry)
+const configPath = cli.config ? path.resolve(rootDir, cli.config) : undefined
+const config = await loadConfig(rootDir, registry, {configPath})
 const targetPath = cli.target ? path.resolve(rootDir, cli.target) : null
 
 const result = await runAudit(rootDir, registry, config, {targetPath})

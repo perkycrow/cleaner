@@ -59,6 +59,14 @@ describe('resolveConfig', () => {
         expect(rules.whitespace.options).toEqual({max: 2})
     })
 
+    test('user exclude is additive with the rule defaultExclude', () => {
+        const registry = createRegistry([
+            defineRule({name: 'docs', group: 'generic', defaultExclude: ['**/*.test.js'], check: () => []})
+        ])
+        const {rules} = resolveConfig({rules: {docs: {exclude: ['vendor/**']}}}, registry)
+        expect(rules.docs.exclude).toEqual(['**/*.test.js', 'vendor/**'])
+    })
+
     test('ignore globs pass through', () => {
         const {ignore} = resolveConfig({ignore: ['dist/**']}, fakeRegistry())
         expect(ignore).toEqual(['dist/**'])
