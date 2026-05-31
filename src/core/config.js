@@ -50,8 +50,8 @@ function resolveRule (rule, setting) {
     return {
         name: rule.name,
         enabled: true,
-        include: config.include || [],
-        exclude: config.exclude || [],
+        include: config.include || rule.defaultInclude || [],
+        exclude: config.exclude || rule.defaultExclude || [],
         options: extractOptions(config)
     }
 }

@@ -379,6 +379,7 @@ export default defineRule({
     name: 'whitespace',
     group: 'generic',
     category: 'whitespace',
+    defaultExclude: ['**/*.test.js'],
     check (content) {
         return processContent(content).issues
     },
