@@ -5,7 +5,7 @@ import path from 'path'
 import {parseArgs} from '@perkycrow/cli_tools/parse_args'
 import {createCleanerRegistry, loadConfig, runAudit, runFix, report, reportFix} from '../src/index.js'
 import {findFiles} from '../src/core/scanner.js'
-import {reportDuplicates} from '../src/reports/index.js'
+import {reportDuplicates, reportUnused} from '../src/reports/index.js'
 
 
 const cli = parseArgs(process.argv.slice(2), {
@@ -17,6 +17,7 @@ const cli = parseArgs(process.argv.slice(2), {
         fix: {type: 'bool', help: 'Apply fixes for fixable rules'},
         dryRun: {type: 'bool', help: 'Preview fixes without writing'},
         duplicates: {type: 'bool', help: 'Report functions declared more than once'},
+        unused: {type: 'bool', help: 'Report files never imported anywhere'},
         config: {type: 'string', alias: '-c', help: 'Path to a cleaner config file'},
         json: {type: 'bool', help: 'Output results as JSON'}
     }
@@ -37,6 +38,18 @@ if (cli.duplicates) {
         console.log(JSON.stringify(findDuplicateFunctions(files, readFile), null, 2))
     } else {
         reportDuplicates(files, readFile)
+    }
+    process.exit(0)
+}
+
+if (cli.unused) {
+    const files = findFiles(rootDir, {ignore: config.ignore, targetPath})
+    const readFile = relativePath => fs.readFileSync(path.join(rootDir, relativePath), 'utf-8')
+    if (cli.json) {
+        const {findUnusedFiles} = await import('../src/reports/index.js')
+        console.log(JSON.stringify(findUnusedFiles(files, readFile, {exclude: ['**/*.test.js', '**/*.doc.js', '**/*.guide.js']}), null, 2))
+    } else {
+        reportUnused(files, readFile)
     }
     process.exit(0)
 }

@@ -1,33 +1,4 @@
-import * as acorn from 'acorn'
-
-
-function parseContent (content) {
-    try {
-        return acorn.parse(content, {ecmaVersion: 'latest', sourceType: 'module', locations: true})
-    } catch {
-        return null
-    }
-}
-
-
-function walk (node, visit) {
-    if (!node || typeof node !== 'object') {
-        return
-    }
-
-    visit(node)
-
-    for (const key of Object.keys(node)) {
-        const child = node[key]
-        if (Array.isArray(child)) {
-            for (const item of child) {
-                walk(item, visit)
-            }
-        } else if (child && typeof child === 'object' && child.type) {
-            walk(child, visit)
-        }
-    }
-}
+import {parseModule, walk} from '../core/ast.js'
 
 
 function normalizeBody (content, node) {
@@ -36,7 +7,7 @@ function normalizeBody (content, node) {
 
 
 export function collectFunctionDeclarations (content) {
-    const ast = parseContent(content)
+    const ast = parseModule(content)
     if (!ast) {
         return []
     }

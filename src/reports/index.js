@@ -1,7 +1,9 @@
 import {header, bold, gray, dim, listItem, success} from '@perkycrow/cli_tools/format'
 import {findDuplicateFunctions} from './duplicate_functions.js'
+import {findUnusedFiles} from './unused_files.js'
 
-export {findDuplicateFunctions, collectFunctionDeclarations} from './duplicate_functions.js'
+
+const DEFAULT_UNUSED_EXCLUDE = ['**/*.test.js', '**/*.doc.js', '**/*.guide.js']
 
 
 export function reportDuplicates (files, readFile) {
@@ -24,3 +26,27 @@ export function reportDuplicates (files, readFile) {
 
     return duplicates
 }
+
+
+export function reportUnused (files, readFile, options = {}) {
+    const exclude = options.exclude || DEFAULT_UNUSED_EXCLUDE
+    const unused = findUnusedFiles(files, readFile, {exclude})
+
+    header('Unused Files')
+
+    if (unused.length === 0) {
+        success('Every file is imported somewhere')
+        return unused
+    }
+
+    console.log(`  ${gray('Files never imported (may include legit entry points)')}`)
+    for (const file of unused) {
+        listItem(file)
+    }
+
+    return unused
+}
+
+
+export {findDuplicateFunctions, collectFunctionDeclarations} from './duplicate_functions.js'
+export {findUnusedFiles, collectImportSources} from './unused_files.js'
