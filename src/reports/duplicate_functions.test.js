@@ -43,6 +43,23 @@ describe('findDuplicateFunctions', () => {
         expect(dups[0].identicalBody).toBe(true)
     })
 
+    test('ignores common-prefix names (init, get, add...) and camelCase variants', () => {
+        const ignored = {
+            'a.js': 'function initEvents () {}\nfunction getX () {}\nfunction addChild () {}',
+            'b.js': 'function initEvents () {}\nfunction getX () {}\nfunction addChild () {}'
+        }
+        expect(findDuplicateFunctions(Object.keys(ignored), file => ignored[file])).toHaveLength(0)
+    })
+
+    test('does not over-ignore distinct words (maintain, address, getter)', () => {
+        const kept = {
+            'a.js': 'function maintain () {}\nfunction address () {}',
+            'b.js': 'function maintain () {}\nfunction address () {}'
+        }
+        const dups = findDuplicateFunctions(Object.keys(kept), file => kept[file])
+        expect(dups.map(d => d.name).sort()).toEqual(['address', 'maintain'])
+    })
+
     test('flags same name with different body too (not identical)', () => {
         const diff = {
             'a.js': 'function go () {\n  return 1\n}',

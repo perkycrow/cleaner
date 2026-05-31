@@ -1,6 +1,22 @@
 import {parseModule, walk} from '../core/ast.js'
 
 
+export const DEFAULT_IGNORE_PREFIXES = [
+    'init', 'main', 'reset', 'animate', 'update', 'mount', 'setup', 'load', 'parse', 'get', 'add'
+]
+
+
+function matchesIgnoredPrefix (name, prefixes) {
+    return prefixes.some(prefix => {
+        if (!name.startsWith(prefix)) {
+            return false
+        }
+        const rest = name.slice(prefix.length)
+        return rest === '' || /^[A-Z0-9]/.test(rest)
+    })
+}
+
+
 function normalizeBody (content, node) {
     return content.slice(node.body.start, node.body.end).replace(/\s+/g, ' ').trim()
 }
@@ -31,11 +47,15 @@ export function collectFunctionDeclarations (content) {
 }
 
 
-export function findDuplicateFunctions (files, readFile) {
+export function findDuplicateFunctions (files, readFile, options = {}) {
+    const ignorePrefixes = options.ignorePrefixes || DEFAULT_IGNORE_PREFIXES
     const byName = new Map()
 
     for (const file of files) {
         for (const fn of collectFunctionDeclarations(readFile(file))) {
+            if (matchesIgnoredPrefix(fn.name, ignorePrefixes)) {
+                continue
+            }
             if (!byName.has(fn.name)) {
                 byName.set(fn.name, [])
             }
