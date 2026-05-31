@@ -12,6 +12,7 @@ import eslintDisables from './opinion/eslint_disables.js'
 import functionOrder from './framework/function_order.js'
 import styleElements from './framework/style_elements.js'
 import domUtils from './framework/dom_utils.js'
+import missingDocs from './framework/missing_docs.js'
 
 
 export const ALL_RULES = [
@@ -28,5 +29,6 @@ export const ALL_RULES = [
     eslintDisables,
     functionOrder,
     styleElements,
-    domUtils
+    domUtils,
+    missingDocs
 ]
