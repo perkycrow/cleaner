@@ -18,6 +18,7 @@ const cli = parseArgs(process.argv.slice(2), {
         dryRun: {type: 'bool', help: 'Preview fixes without writing'},
         duplicates: {type: 'bool', help: 'Report functions declared more than once'},
         unused: {type: 'bool', help: 'Report files never imported anywhere'},
+        compact: {type: 'bool', help: 'One-line summary per rule (no per-issue detail)'},
         config: {type: 'string', alias: '-c', help: 'Path to a cleaner config file'},
         json: {type: 'bool', help: 'Output results as JSON'}
     }
@@ -68,7 +69,7 @@ if (cli.audit || !cli.fix) {
     if (cli.json) {
         console.log(JSON.stringify(result, null, 2))
     } else {
-        report(result, {compact: true})
+        report(result, {compact: cli.compact})
     }
     process.exit(result.totals.issues > 0 ? 1 : 0)
 }

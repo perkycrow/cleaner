@@ -1,11 +1,11 @@
 import {
     header, success, successCompact, failureCompact,
-    hint as printHint, listItem, divider
+    hint as printHint, listItem, divider, gray
 } from '@perkycrow/cli_tools/format'
 
 
 export function report (runResult, options = {}) {
-    const compact = options.compact !== false
+    const compact = options.compact === true
 
     for (const result of runResult.results) {
         reportRule(result, compact)
@@ -21,12 +21,7 @@ function reportRule (result, compact) {
     const title = humanize(result.name)
 
     if (result.issueCount === 0) {
-        if (compact) {
-            successCompact(`${title}: clean`)
-        } else {
-            header(title)
-            success('No issues')
-        }
+        successCompact(`${title}: clean`)
         return
     }
 
@@ -35,13 +30,16 @@ function reportRule (result, compact) {
         return
     }
 
-    header(title)
+    header(`${title} — ${result.issueCount} issue(s)`)
     if (result.hint) {
         printHint(result.hint)
     }
     divider()
     for (const entry of result.issues) {
         listItem(entry.file, entry.messages.length)
+        for (const message of entry.messages) {
+            console.log(`      ${gray(message)}`)
+        }
     }
 }
 
