@@ -14,6 +14,8 @@ import testStyleRule from '../src/rules/opinion/it_usage.js'
 import singleDescribeRule from '../src/rules/opinion/single_describes.js'
 import eslintDisablesRule from '../src/rules/opinion/eslint_disables.js'
 import functionOrderRule from '../src/rules/framework/function_order.js'
+import styleElementsRule from '../src/rules/framework/style_elements.js'
+import domUtilsRule from '../src/rules/framework/dom_utils.js'
 
 import WhitespaceAuditor from '../../perky/scripts/cleaner/auditors/whitespace.js'
 import ImportsAuditor from '../../perky/scripts/cleaner/auditors/imports.js'
@@ -26,6 +28,8 @@ import ItUsageAuditor from '../../perky/scripts/cleaner/auditors/tests/it_usage.
 import SingleDescribesAuditor from '../../perky/scripts/cleaner/auditors/tests/single_describes.js'
 import DisablesAuditor from '../../perky/scripts/cleaner/auditors/eslint/disables.js'
 import FunctionOrderAuditor from '../../perky/scripts/cleaner/auditors/function_order.js'
+import StyleElementAuditor from '../../perky/scripts/cleaner/auditors/style_elements.js'
+import DomUtilsUsageAuditor from '../../perky/scripts/cleaner/auditors/dom_utils_usage.js'
 
 
 const PERKY = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../perky')
@@ -43,7 +47,9 @@ const PER_FILE = {
     'privacy': {rule: privacyRule, Auditor: PrivacyAuditor},
     'multiple-classes': {rule: multipleClassesRule, Auditor: MultipleClassesAuditor},
     'comments': {rule: commentsRule, Auditor: CommentsAuditor},
-    'function-order': {rule: functionOrderRule, Auditor: FunctionOrderAuditor}
+    'function-order': {rule: functionOrderRule, Auditor: FunctionOrderAuditor},
+    'style-elements': {rule: styleElementsRule, Auditor: StyleElementAuditor},
+    'dom-utils': {rule: domUtilsRule, Auditor: DomUtilsUsageAuditor}
 }
 
 const FLAGGED_SET = {

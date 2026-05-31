@@ -10,6 +10,8 @@ import testStyle from './opinion/it_usage.js'
 import testSingleDescribe from './opinion/single_describes.js'
 import eslintDisables from './opinion/eslint_disables.js'
 import functionOrder from './framework/function_order.js'
+import styleElements from './framework/style_elements.js'
+import domUtils from './framework/dom_utils.js'
 
 
 export const ALL_RULES = [
@@ -24,5 +26,7 @@ export const ALL_RULES = [
     testStyle,
     testSingleDescribe,
     eslintDisables,
-    functionOrder
+    functionOrder,
+    styleElements,
+    domUtils
 ]
