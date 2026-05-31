@@ -5,7 +5,7 @@ import path from 'path'
 import {defineRule} from './rule.js'
 import {createRegistry} from './registry.js'
 import {resolveConfig} from './config.js'
-import {runAudit} from './runner.js'
+import {runAudit, runFix} from './runner.js'
 
 
 const noBad = defineRule({
@@ -89,6 +89,62 @@ describe('runAudit', () => {
         const {totals} = await runAudit(root, registry(), config)
         expect(totals.rules).toBe(2)
         expect(totals.issues).toBe(3)
+    })
+
+})
+
+
+const trimTrailing = defineRule({
+    name: 'trim-trailing',
+    group: 'generic',
+    check: content => (/ +$/m.test(content) ? ['trailing space'] : []),
+    fix (content) {
+        const result = content.replace(/ +$/gm, '')
+        return {result, fixed: result !== content, fixCount: 1}
+    }
+})
+
+
+describe('runFix', () => {
+
+    let root
+
+    beforeAll(() => {
+        root = fs.mkdtempSync(path.join(os.tmpdir(), 'cleaner-fix-'))
+        fs.writeFileSync(path.join(root, 'dirty.js'), 'const x = 1   \n')
+        fs.writeFileSync(path.join(root, 'clean.js'), 'const y = 2\n')
+    })
+
+    afterAll(() => {
+        fs.rmSync(root, {recursive: true, force: true})
+    })
+
+    function fixRegistry () {
+        return createRegistry([trimTrailing])
+    }
+
+    test('dry run reports fixes without writing', async () => {
+        const config = resolveConfig({}, fixRegistry())
+        const result = await runFix(root, fixRegistry(), config, {dryRun: true})
+        expect(result.totals.filesFixed).toBe(1)
+        expect(fs.readFileSync(path.join(root, 'dirty.js'), 'utf-8')).toBe('const x = 1   \n')
+    })
+
+    test('applies fixes to disk when not a dry run', async () => {
+        const config = resolveConfig({}, fixRegistry())
+        const result = await runFix(root, fixRegistry(), config, {})
+        expect(result.totals.filesFixed).toBe(1)
+        expect(result.totals.issuesFixed).toBe(1)
+        expect(fs.readFileSync(path.join(root, 'dirty.js'), 'utf-8')).toBe('const x = 1\n')
+    })
+
+    test('non-fixable rules are skipped', async () => {
+        const registry = createRegistry([
+            defineRule({name: 'audit-only', group: 'generic', check: () => ['x']})
+        ])
+        const config = resolveConfig({}, registry)
+        const result = await runFix(root, registry, config, {})
+        expect(result.results).toHaveLength(0)
     })
 
 })

@@ -38,6 +38,49 @@ export async function runAudit (rootDir, registry, config, options = {}) {
 }
 
 
+export async function runFix (rootDir, registry, config, options = {}) {
+    const files = findFiles(rootDir, {ignore: config.ignore, targetPath: options.targetPath})
+    const dryRun = options.dryRun || false
+    const results = []
+
+    for (const rule of registry.all()) {
+        const ruleConfig = config.rules[rule.name]
+        if (!ruleConfig || !ruleConfig.enabled || typeof rule.fix !== 'function') {
+            continue
+        }
+
+        const scoped = files.filter(file => isInScope(file, ruleConfig))
+        let filesFixed = 0
+        let issuesFixed = 0
+
+        for (const file of scoped) {
+            const absolutePath = path.join(rootDir, file)
+            const content = fs.readFileSync(absolutePath, 'utf-8')
+            const outcome = await rule.fix(content, {relativePath: file, absolutePath, rootDir, options: ruleConfig.options})
+
+            if (outcome.fixed) {
+                filesFixed += 1
+                issuesFixed += outcome.fixCount || 1
+                if (!dryRun) {
+                    fs.writeFileSync(absolutePath, outcome.result, 'utf-8')
+                }
+            }
+        }
+
+        results.push({name: rule.name, filesFixed, issuesFixed})
+    }
+
+    return {
+        dryRun,
+        results,
+        totals: {
+            filesFixed: results.reduce((sum, result) => sum + result.filesFixed, 0),
+            issuesFixed: results.reduce((sum, result) => sum + result.issuesFixed, 0)
+        }
+    }
+}
+
+
 async function collectIssues (rule, files, ctx) {
     if (typeof rule.audit === 'function') {
         return normalize(await rule.audit({...ctx, files}))

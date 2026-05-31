@@ -46,6 +46,27 @@ function reportRule (result, compact) {
 }
 
 
+export function reportFix (fixResult) {
+    const label = fixResult.dryRun ? 'would fix' : 'fixed'
+
+    for (const result of fixResult.results) {
+        if (result.filesFixed > 0) {
+            successCompact(`${humanize(result.name)}: ${label} ${result.issuesFixed} issue(s) in ${result.filesFixed} file(s)`)
+        }
+    }
+
+    divider()
+    const {filesFixed, issuesFixed} = fixResult.totals
+    if (issuesFixed === 0) {
+        success('Nothing to fix')
+    } else {
+        success(`${label} ${issuesFixed} issue(s) across ${filesFixed} file(s)`)
+    }
+
+    return fixResult
+}
+
+
 function reportTotals (totals) {
     divider()
     if (totals.issues === 0) {

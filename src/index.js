@@ -9,7 +9,7 @@ export function createCleanerRegistry () {
 
 export {loadConfig, resolveConfig} from './core/config.js'
 export {PRESETS} from './core/presets.js'
-export {runAudit} from './core/runner.js'
-export {report} from './core/reporter.js'
+export {runAudit, runFix} from './core/runner.js'
+export {report, reportFix} from './core/reporter.js'
 export {defineRule} from './core/rule.js'
 export {ALL_RULES} from './rules/index.js'
