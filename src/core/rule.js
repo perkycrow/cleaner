@@ -8,8 +8,8 @@ export function defineRule (rule) {
     if (!RULE_GROUPS.includes(rule.group)) {
         throw new Error(`Rule '${rule.name}' needs a group (one of: ${RULE_GROUPS.join(', ')})`)
     }
-    if (typeof rule.check !== 'function') {
-        throw new Error(`Rule '${rule.name}' needs a check() function`)
+    if (typeof rule.check !== 'function' && typeof rule.audit !== 'function') {
+        throw new Error(`Rule '${rule.name}' needs a check() (per-file) or audit() (project) function`)
     }
 
     return {
