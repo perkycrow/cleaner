@@ -28,7 +28,7 @@
     "node": ">=16.0.0"
   },
   "dependencies": {
-    "@perkycrow/cli_tools": "portal:../cli_tools",
+    "@perkycrow/cli_tools": "github:perkycrow/cli_tools#v0.1.0",
     "acorn": "^8.16.0",
     "picomatch": "^4.0.4"
   },
