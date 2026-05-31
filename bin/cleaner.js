@@ -3,9 +3,11 @@
 import fs from 'fs'
 import path from 'path'
 import {parseArgs} from '@perkycrow/cli_tools/parse_args'
+import {promptChoice} from '@perkycrow/cli_tools/prompt'
 import {createCleanerRegistry, loadConfig, runAudit, runFix, report, reportFix} from '../src/index.js'
-import {findFiles} from '../src/core/scanner.js'
+import {findFiles, isInScope} from '../src/core/scanner.js'
 import {reportDuplicates, reportUnused} from '../src/reports/index.js'
+import {runInteractiveComments} from '../src/interactive/comments.js'
 
 
 const cli = parseArgs(process.argv.slice(2), {
@@ -18,6 +20,7 @@ const cli = parseArgs(process.argv.slice(2), {
         dryRun: {type: 'bool', help: 'Preview fixes without writing'},
         duplicates: {type: 'bool', help: 'Report functions declared more than once'},
         unused: {type: 'bool', help: 'Report files never imported anywhere'},
+        interactive: {type: 'bool', alias: '-i', help: 'Triage comments one by one: keep / discard / skip'},
         compact: {type: 'bool', help: 'One-line summary per rule (no per-issue detail)'},
         config: {type: 'string', alias: '-c', help: 'Path to a cleaner config file'},
         json: {type: 'bool', help: 'Output results as JSON'}
@@ -52,6 +55,22 @@ if (cli.unused) {
     } else {
         reportUnused(files, readFile)
     }
+    process.exit(0)
+}
+
+if (cli.interactive) {
+    const commentsConfig = config.rules.comments || {include: [], exclude: ['**/*.test.js', '**/*.doc.js']}
+    const files = findFiles(rootDir, {ignore: config.ignore, targetPath})
+        .filter(file => isInScope(file, commentsConfig))
+
+    const stats = await runInteractiveComments(files, {
+        readFile: relativePath => fs.readFileSync(path.join(rootDir, relativePath), 'utf-8'),
+        writeFile: (relativePath, content) => fs.writeFileSync(path.join(rootDir, relativePath), content, 'utf-8'),
+        prompt: promptChoice,
+        print: message => console.log(message)
+    })
+
+    console.log(`\nkept ${stats.kept}, discarded ${stats.discarded}, skipped ${stats.skipped} — ${stats.filesChanged} file(s) changed`)
     process.exit(0)
 }
 

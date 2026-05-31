@@ -19,11 +19,13 @@ const PROTECTED_COMMENT_PATTERNS = [
     /@vite-ignore/,
     /@vitest-environment/,
     /^\s*=+\s+.+\s+=+\s*$/,
-    /^\s*GENERATED/
+    /^\s*GENERATED/,
+    /^!/,
+    /^\/\*!/
 ]
 
 
-function isProtectedComment (text) {
+export function isProtectedComment (text) {
     return PROTECTED_COMMENT_PATTERNS.some(pattern => pattern.test(text))
 }
 
