@@ -8,6 +8,8 @@ import switchRule from './opinion/switch.js'
 import testDeepNesting from './opinion/deep_nesting.js'
 import testStyle from './opinion/it_usage.js'
 import testSingleDescribe from './opinion/single_describes.js'
+import eslintDisables from './opinion/eslint_disables.js'
+import functionOrder from './framework/function_order.js'
 
 
 export const ALL_RULES = [
@@ -20,5 +22,7 @@ export const ALL_RULES = [
     switchRule,
     testDeepNesting,
     testStyle,
-    testSingleDescribe
+    testSingleDescribe,
+    eslintDisables,
+    functionOrder
 ]

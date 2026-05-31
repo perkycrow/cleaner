@@ -12,6 +12,8 @@ import switchRule from '../src/rules/opinion/switch.js'
 import deepNestingRule from '../src/rules/opinion/deep_nesting.js'
 import testStyleRule from '../src/rules/opinion/it_usage.js'
 import singleDescribeRule from '../src/rules/opinion/single_describes.js'
+import eslintDisablesRule from '../src/rules/opinion/eslint_disables.js'
+import functionOrderRule from '../src/rules/framework/function_order.js'
 
 import WhitespaceAuditor from '../../perky/scripts/cleaner/auditors/whitespace.js'
 import ImportsAuditor from '../../perky/scripts/cleaner/auditors/imports.js'
@@ -22,6 +24,8 @@ import SwitchesAuditor from '../../perky/scripts/cleaner/auditors/eslint/switche
 import DeepNestingAuditor from '../../perky/scripts/cleaner/auditors/tests/deep_nesting.js'
 import ItUsageAuditor from '../../perky/scripts/cleaner/auditors/tests/it_usage.js'
 import SingleDescribesAuditor from '../../perky/scripts/cleaner/auditors/tests/single_describes.js'
+import DisablesAuditor from '../../perky/scripts/cleaner/auditors/eslint/disables.js'
+import FunctionOrderAuditor from '../../perky/scripts/cleaner/auditors/function_order.js'
 
 
 const PERKY = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../perky')
@@ -38,7 +42,8 @@ const PER_FILE = {
     'imports': {rule: importsRule, Auditor: ImportsAuditor},
     'privacy': {rule: privacyRule, Auditor: PrivacyAuditor},
     'multiple-classes': {rule: multipleClassesRule, Auditor: MultipleClassesAuditor},
-    'comments': {rule: commentsRule, Auditor: CommentsAuditor}
+    'comments': {rule: commentsRule, Auditor: CommentsAuditor},
+    'function-order': {rule: functionOrderRule, Auditor: FunctionOrderAuditor}
 }
 
 const FLAGGED_SET = {
@@ -91,11 +96,10 @@ function compareFlaggedSet (name, {rule, Auditor, exclude = [], excludeFiles = [
 }
 
 
-function compareSwitchTotals () {
-    const newTotal = files.reduce((sum, file) => sum + switchRule.check(read(file), {}).length, 0)
-    const oldTotal = new SwitchesAuditor(PERKY, {silent: true}).audit().switchesFound
-    const divergence = newTotal === oldTotal ? 0 : 1
-    console.log(`switch (totals): new=${newTotal} old=${oldTotal}, ${divergence} divergence(s)`)
+function compareTotals (name, ruleCheck, oldCount) {
+    const newTotal = files.reduce((sum, file) => sum + ruleCheck(read(file), {}).length, 0)
+    const divergence = newTotal === oldCount ? 0 : 1
+    console.log(`${name} (totals): new=${newTotal} old=${oldCount}, ${divergence} divergence(s)`)
     return divergence
 }
 
@@ -107,7 +111,10 @@ for (const name of Object.keys(PER_FILE)) {
 for (const name of Object.keys(FLAGGED_SET)) {
     total += compareFlaggedSet(name, FLAGGED_SET[name])
 }
-total += compareSwitchTotals()
+total += compareTotals('switch', (content, ctx) => switchRule.check(content, ctx),
+    new SwitchesAuditor(PERKY, {silent: true}).audit().switchesFound)
+total += compareTotals('eslint-disables', (content, ctx) => eslintDisablesRule.check(content, ctx),
+    new DisablesAuditor(PERKY, {silent: true}).audit().uncleanCount)
 
 console.log(`\nTOTAL divergences: ${total}`)
 process.exit(total > 0 ? 1 : 0)
