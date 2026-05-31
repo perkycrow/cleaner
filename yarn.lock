@@ -312,7 +312,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@perkycrow/cleaner@workspace:."
   dependencies:
-    "@perkycrow/cli_tools": "portal:../cli_tools"
+    "@perkycrow/cli_tools": "github:perkycrow/cli_tools#v0.1.0"
     "@perkycrow/eslint_config": "github:perkycrow/eslint_config#v0.1.0"
     acorn: "npm:^8.16.0"
     eslint: "npm:^10.0.2"
@@ -323,11 +323,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@perkycrow/cli_tools@portal:../cli_tools::locator=%40perkycrow%2Fcleaner%40workspace%3A.":
-  version: 0.0.0-use.local
-  resolution: "@perkycrow/cli_tools@portal:../cli_tools::locator=%40perkycrow%2Fcleaner%40workspace%3A."
+"@perkycrow/cli_tools@github:perkycrow/cli_tools#v0.1.0":
+  version: 0.1.0
+  resolution: "@perkycrow/cli_tools@https://github.com/perkycrow/cli_tools.git#commit=4c2362750f48369d50a6b3c3d0d0532646fbde13"
+  checksum: 10c0/69b107c95a063b30264ae250e1db9fca0c52a2c12df7ba5bc5c334c991785921301d7cf9b1397e143b0ed571ab08d2d9316beea9b631f22efae13e92d3585089
   languageName: node
-  linkType: soft
+  linkType: hard
 
 "@perkycrow/eslint_config@github:perkycrow/eslint_config#v0.1.0":
   version: 0.1.0
