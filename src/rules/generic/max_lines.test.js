@@ -9,7 +9,7 @@ describe('max-lines rule', () => {
     })
 
     test('flags files over the default threshold', () => {
-        const content = Array(301).fill('x').join('\n')
+        const content = Array(601).fill('x').join('\n')
         expect(rule.check(content, {options: {}})).toHaveLength(1)
     })
 

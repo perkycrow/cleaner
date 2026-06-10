@@ -1,7 +1,7 @@
 import {defineRule} from '../../core/rule.js'
 
 
-const DEFAULT_MAX = 300
+const DEFAULT_MAX = 600
 
 
 export function countLines (content) {

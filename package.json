@@ -1,6 +1,6 @@
 {
   "name": "@perkycrow/cleaner",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Configurable code-quality auditor for JS projects (generic + framework presets)",
   "type": "module",
   "license": "Apache-2.0",
